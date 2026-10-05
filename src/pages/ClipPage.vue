@@ -5,6 +5,7 @@ import { EditorView, lineNumbers, highlightSpecialChars, drawSelection, dropCurs
 
 import { onMounted, onBeforeUnmount, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRouter } from "vue-router";
 import useClipStore from "@/store/clip";
 
 import { PutFile } from "@/api";
@@ -12,6 +13,11 @@ import { toast } from "@/utils/toast";
 import { getRandomFilename } from "@/utils/utils";
 
 const { t: $t } = useI18n();
+const router = useRouter();
+
+const goFileManage = () => {
+  router.push('/filemanage');
+};
 
 const code = ref("");
 const modified = ref(false);
@@ -114,6 +120,7 @@ onBeforeUnmount(() => {
           <option value="private">{{ $t('common.private') }}</option>
           <option value="public">{{ $t('common.public') }}</option>
         </select>
+        <button class="manage-btn" @click="goFileManage">{{ $t('page_title.filemanage') }}</button>
         <button class="save-btn" @click="onSaveBtnClick">{{ $t('common.save') }}</button>
       </div>
     </div>
@@ -164,6 +171,15 @@ body,
 
 .text-area .footer .save-btn:hover {
   background-color: #1a7f37;
+}
+
+.text-area .footer .manage-btn {
+  --uno: rounded px-6 py-1.5 text-sm ml-2 text-white;
+  background-color: #0969da;
+}
+
+.text-area .footer .manage-btn:hover {
+  background-color: #0757ba;
 }
 
 .text-area .header .filename-input {

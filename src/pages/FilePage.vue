@@ -140,6 +140,7 @@ onUnmounted(() => {
           <option value="private">{{ $t('common.private') }}</option>
           <option value="public">{{ $t('common.public') }}</option>
         </select>
+        <button class="manage-btn" @click="router.push('/filemanage')">{{ $t('page_title.filemanage') }}</button>
       </div>
     </div>
     <div class="px-4 py-4 max-w-screen-md w-4/5">
@@ -200,6 +201,15 @@ body,
 
 .file-area .footer .save-btn:hover {
   background-color: #1a7f37;
+}
+
+.file-area .footer .manage-btn {
+  --uno: rounded px-6 py-1.5 text-sm ml-2 text-white;
+  background-color: #0969da;
+}
+
+.file-area .footer .manage-btn:hover {
+  background-color: #0757ba;
 }
 
 .file-area .header .filename-input {

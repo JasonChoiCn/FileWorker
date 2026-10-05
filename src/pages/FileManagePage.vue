@@ -15,7 +15,10 @@ const encodeName = encodeURIComponent;
 const refreshFiles = async () => {
     const res = await ListFiles();
     if (res.Contents) {
-        uploadedFiles.value = res.Contents;
+        // Newest uploads first (S3 lists keys alphabetically, not by time).
+        uploadedFiles.value = [...res.Contents].sort(
+            (a, b) => (b.LastModified?.getTime() ?? 0) - (a.LastModified?.getTime() ?? 0)
+        );
     }
 };
 
