@@ -4,11 +4,14 @@ export default {
         public: 'Public',
         private: 'Private',
         save: 'Save',
+        refresh: 'Refresh',
     },
     index: {
         file_channel_title: 'Files',
         clip_channel_title: 'Clipboard',
-        tips_content: 'Try pasting or dragging'
+        tips_content: 'Try pasting or dragging',
+        file_channel_desc: 'Upload files, get shareable links',
+        clip_channel_desc: 'Jot down text, grab it on any device',
     },
     login: {
         login_title: 'Login to continue',
@@ -30,5 +33,17 @@ export default {
         save_failed: 'Save failed, please retry',
         delete_failed: 'Delete failed, please retry',
         list_failed: 'Failed to load the file list, please retry',
+    },
+    file: {
+        upload_hint: 'Files are saved as "date-time-filename", Chinese names are fine',
+        drop_hint: 'Click to choose files, or drag & drop here',
+        drop_sub: 'Multiple files supported',
+        status_uploading: 'Uploading',
+        status_done: 'Done',
+        status_error: 'Failed',
+    },
+    filemanage: {
+        count: '{count} file(s)',
+        empty: 'No files yet — upload one to get started',
     }
 }

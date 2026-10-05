@@ -20,25 +20,73 @@ const onSubmitBtnClick = () => {
         }
     }, 1000);
 }
+
+const onEnter = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+        onSubmitBtnClick();
+    }
+}
 </script>
 
 <template>
-    <div class="cursor-default flex flex-col items-center">
-        <div id="board">
-            <h1 class="text-lg">{{ $t("login.login_title") }}</h1>
-            <input class="my-5 px-2 py-1 w-64 border-2 rounded" type="password" v-model="password"
-                :placeholder="$t('login.password_placeholder')">
-            <button id="submit-button" class="btn" @click="onSubmitBtnClick">{{ $t("login.login_button") }}</button>
+    <div class="login-wrap">
+        <div class="card login-card">
+            <span class="login-icon"><span class="i-mdi-lock-outline"></span></span>
+            <h1 class="login-title">{{ $t("login.login_title") }}</h1>
+            <input class="text-input login-input" type="password" v-model="password" @keydown="onEnter"
+                :placeholder="$t('login.password_placeholder')" autofocus />
+            <button class="btn btn-primary login-btn" @click="onSubmitBtnClick">{{ $t("login.login_button") }}</button>
         </div>
     </div>
 </template>
 
 <style scoped>
-#board {
-    @apply rounded-lg flex flex-col bg-gray-100 border-2 border-gray-200 my-5 mx-2 p-4 justify-center items-center dark:(bg-dark-100 border-dark-300 text-gray-400);
+.login-wrap {
+    display: flex;
+    justify-content: center;
+    padding-top: 8vh;
 }
 
-.btn {
-    @apply rounded cursor-pointer outline-none bg-green-500 text-white text-lg py-1 px-4 transition w-64 hover:bg-green-600;
+.login-card {
+    width: 100%;
+    max-width: 380px;
+    padding: 40px 32px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.login-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--brand), #8b5cf6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    box-shadow: 0 10px 24px -8px rgba(99, 102, 241, 0.7);
+    margin-bottom: 4px;
+}
+
+.login-title {
+    font-size: 19px;
+    font-weight: 800;
+    margin: 0 0 6px;
+}
+
+.login-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 16px;
+    font-size: 15px;
+}
+
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
 }
 </style>

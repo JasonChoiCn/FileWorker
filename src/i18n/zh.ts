@@ -4,11 +4,14 @@ export default {
         public: '公开',
         private: '私有',
         save: '保存',
+        refresh: '刷新',
     },
     index: {
         file_channel_title: '文件',
         clip_channel_title: '剪贴板',
-        tips_content: '直接粘贴/拖动试试'
+        tips_content: '直接粘贴/拖动试试',
+        file_channel_desc: '上传文件，生成分享链接',
+        clip_channel_desc: '随手记点文字，换设备也能取',
     },
     login: {
         login_title: '登录以继续',
@@ -30,5 +33,17 @@ export default {
         save_failed: '保存失败，请重试',
         delete_failed: '删除失败，请重试',
         list_failed: '读取文件列表失败，请重试',
+    },
+    file: {
+        upload_hint: '文件会以「日期-时间-文件名」保存，中文名也没问题',
+        drop_hint: '点击选择文件，或直接拖拽到这里',
+        drop_sub: '支持多选',
+        status_uploading: '上传中',
+        status_done: '已完成',
+        status_error: '失败',
+    },
+    filemanage: {
+        count: '共 {count} 个文件',
+        empty: '还没有文件，去上传一个吧',
     }
 }

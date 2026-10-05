@@ -15,12 +15,9 @@ import { getRandomFilename } from "@/utils/utils";
 const { t: $t } = useI18n();
 const router = useRouter();
 
-const goFileManage = () => {
-  router.push('/filemanage');
-};
-
 const code = ref("");
 const modified = ref(false);
+const saving = ref(false);
 const editorElement = ref();
 let editor: EditorView;
 
@@ -62,7 +59,13 @@ let refreshRandomFileName = () => {
 
 const clipStore = useClipStore();
 
+const goFileManage = () => {
+  router.push('/filemanage');
+};
+
 let onSaveBtnClick = async () => {
+  if (saving.value) return;
+  saving.value = true;
   try {
     const key = await PutFile(filename.value, code.value, clipStore.visibility, "text");
     modified.value = false;
@@ -70,6 +73,8 @@ let onSaveBtnClick = async () => {
   } catch (error) {
     console.error(error);
     toast($t("toast.save_failed"), 'error');
+  } finally {
+    saving.value = false;
   }
 }
 
@@ -107,116 +112,176 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex flex-col items-center">
-    <div class="text-area flex flex-col mt-4">
-      <div class="header p-2 flex flex-row items-center">
-        <input class="filename-input monospace" type="text" v-model="filename" :placeholder="$t('common.filename')" />
-        <button @click="refreshRandomFileName" class="i-mdi-refresh ml-1 w-5 h-5"></button>
-        <div :class="modified ? 'unsave-attention' : 'save-attention'"></div>
+  <div>
+    <div class="page-head">
+      <div>
+        <div class="page-title">{{ $t("page_title.clip") }}</div>
+        <div class="page-sub">{{ $t("index.clip_channel_desc") }}</div>
       </div>
-      <div ref="editorElement"></div>
-      <div class="footer p-2">
-        <select class="public-select" v-model="clipStore.visibility">
+    </div>
+
+    <div class="card clip-card">
+      <div class="clip-header">
+        <span class="clip-ic"><span class="i-mdi-clipboard-text-outline"></span></span>
+        <input class="text-input monospace filename-input" type="text" v-model="filename"
+          :placeholder="$t('common.filename')" />
+        <button class="icon-btn" @click="refreshRandomFileName" :title="$t('common.refresh')">
+          <span class="i-mdi-refresh"></span>
+        </button>
+        <span class="save-dot" :class="modified ? 'dot-dirty' : 'dot-clean'"></span>
+      </div>
+      <div ref="editorElement" class="editor-wrap"></div>
+      <div class="clip-footer">
+        <select class="select" v-model="clipStore.visibility">
           <option value="private">{{ $t('common.private') }}</option>
           <option value="public">{{ $t('common.public') }}</option>
         </select>
-        <button class="manage-btn" @click="goFileManage">{{ $t('page_title.filemanage') }}</button>
-        <button class="save-btn" @click="onSaveBtnClick">{{ $t('common.save') }}</button>
+        <button class="btn btn-primary" @click="goFileManage">
+          <span class="i-mdi-folder-open-outline"></span>{{ $t('page_title.filemanage') }}
+        </button>
+        <button class="btn btn-success save-btn" @click="onSaveBtnClick" :disabled="saving">
+          <span v-if="saving" class="spinner spinner-light"></span>
+          <span v-else class="i-mdi-content-save-outline"></span>
+          {{ $t('common.save') }}
+        </button>
       </div>
     </div>
   </div>
 </template>
 
-<style>
-html,
-body,
-#app {
-  margin: 0;
-  padding: 0;
-  background-color: #f8f9fa;
+<style scoped>
+.clip-card {
+  overflow: hidden;
 }
 
-.pannel {
-  --uno: my-6 px-4 py-4 max-w-screen-md w-4/5 rounded shadow-md;
+.clip-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fafbfe;
 }
 
-.tips-pannel {
-  background-color: #d1e7dd;
+.clip-ic {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #f472b6, #fb7185);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21px;
 }
 
-.text-area {
-  --uno: rounded max-w-screen-md w-4/5 border-1 border-gray-300;
-  background-color: white;
+.filename-input {
+  flex: 1;
+  min-width: 0;
 }
 
-.text-area .header {
-  background-color: #f5f5f5;
+.icon-btn {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  background: #eef0f5;
+  color: var(--ink-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.3s ease;
 }
 
-.text-area .footer {
-  --uno: flex flex-row;
-  background-color: #f5f5f5;
+.icon-btn:hover {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
 }
 
-.text-area .footer .public-select {
-  --uno: border-1 rounded px-6 py-1.5 text-sm;
-  border-color: #d1d1d1;
-  outline-color: #0969da;
+.icon-btn:active .i-mdi-refresh {
+  transform: rotate(180deg);
 }
 
-.text-area .footer .save-btn {
-  --uno: rounded px-6 py-1.5 text-sm ml-auto text-white;
-  background-color: #1f883d;
+.save-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-left: 2px;
 }
 
-.text-area .footer .save-btn:hover {
-  background-color: #1a7f37;
+.dot-clean {
+  background: var(--success);
+  box-shadow: 0 0 0 4px var(--success-soft);
 }
 
-.text-area .footer .manage-btn {
-  --uno: rounded px-6 py-1.5 text-sm ml-2 text-white;
-  background-color: #0969da;
+.dot-dirty {
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px #fef3e2;
+  animation: fw-pulse 1.6s ease infinite;
 }
 
-.text-area .footer .manage-btn:hover {
-  background-color: #0757ba;
+@keyframes fw-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
 }
 
-.text-area .header .filename-input {
-  --uno: border-1 rounded px-3 py-2 text-sm w-60;
-  border-color: #d1d1d1;
-  outline-color: #0969da;
+.editor-wrap {
+  background: #fff;
 }
 
-.cm-editor {
-  height: 400px;
-  border-top: 1px solid #ddd;
-  border-bottom: 1px solid #ddd;
+.editor-wrap :deep(.cm-editor) {
+  min-height: 380px;
+  max-height: 60vh;
+  font-size: 14px;
 }
 
-.cm-editor.cm-focused {
+.editor-wrap :deep(.cm-editor.cm-focused) {
   outline: none;
 }
 
-.cm-gutter.cm-lineNumbers {
-  background-color: white;
-}
-
-.cm-gutters {
+.editor-wrap :deep(.cm-gutters) {
   border: none !important;
+  background: #fafbfe !important;
 }
 
-.cm-selectionBackground {
-  background-color: #54aeff66 !important;
+.clip-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+  background: #fafbfe;
 }
 
-.unsave-attention {
-  --uno: i-mdi-circle-small w-8 h-8 ml-auto;
-  color: #9a6700 !important;
+.save-btn {
+  margin-left: auto;
 }
 
-.save-attention {
-  --uno: i-mdi-circle-small w-8 h-8 ml-auto;
-  color: #1f883d !important;
+.save-btn:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+.spinner-light {
+  border-color: rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+}
+</style>
+
+<style>
+.cm-editor {
+  border: none;
 }
 </style>
