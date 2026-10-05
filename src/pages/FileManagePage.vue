@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { onBeforeMount, ref, type Ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { formatBytes } from '@/utils/utils';
+import { toast } from '@/utils/toast';
 import { DeleteFile, ListFiles } from '@/api';
 import type { _Object } from '@aws-sdk/client-s3';
 
+const { t: $t } = useI18n();
+
 let uploadedFiles: Ref<_Object[]> = ref([]);
+
+const encodeName = encodeURIComponent;
 
 const refreshFiles = async () => {
     const res = await ListFiles();
@@ -21,7 +27,13 @@ const onDeleteFileClick = async (key?: string) => {
     if (!key) {
         return;
     }
-    await DeleteFile(key);
+    try {
+        await DeleteFile(key);
+    } catch (error) {
+        console.error(error);
+        toast($t("toast.delete_failed"), 'error');
+        return;
+    }
     await refreshFiles();
 };
 </script>
@@ -34,7 +46,7 @@ const onDeleteFileClick = async (key?: string) => {
                 class="w-full flex flex-row items-center mt-4 rounded border-1 border-gray-300 px-2 py-1">
                 <div class="w-10 h-10 i-mdi-file-document-outline"></div>
                 <div class="flex flex-col">
-                    <a class="text-lg font-semibold" :href="`/${file.Key}`" target="_blank">{{ file.Key }}</a>
+                    <a class="text-lg font-semibold" :href="'/' + encodeName(file.Key ?? '')" target="_blank">{{ file.Key }}</a>
                     <div class="text-sm text-gray">{{ formatBytes(file.Size ?? 0) }}</div>
                 </div>
                 <div class="ml-auto w-6 h-6 i-mdi-trash-can-outline cursor-pointer"

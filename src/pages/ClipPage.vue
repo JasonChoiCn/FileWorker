@@ -4,10 +4,14 @@ import { EditorState } from "@codemirror/state"
 import { EditorView, lineNumbers, highlightSpecialChars, drawSelection, dropCursor } from "@codemirror/view"
 
 import { onMounted, onBeforeUnmount, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import useClipStore from "@/store/clip";
 
 import { PutFile } from "@/api";
+import { toast } from "@/utils/toast";
 import { getRandomFilename } from "@/utils/utils";
+
+const { t: $t } = useI18n();
 
 const code = ref("");
 const modified = ref(false);
@@ -53,8 +57,14 @@ let refreshRandomFileName = () => {
 const clipStore = useClipStore();
 
 let onSaveBtnClick = async () => {
-  await PutFile(filename.value, code.value, clipStore.visibility, "text");
-  modified.value = false;
+  try {
+    const key = await PutFile(filename.value, code.value, clipStore.visibility, "text");
+    modified.value = false;
+    toast($t("toast.save_success", { name: key }), 'success');
+  } catch (error) {
+    console.error(error);
+    toast($t("toast.save_failed"), 'error');
+  }
 }
 
 let saveContentKeydown = (e: KeyboardEvent) => {

@@ -22,5 +22,12 @@ export default {
         file: 'Files',
         login: 'Login',
         filemanage: 'File Manage',
+    },
+    toast: {
+        upload_success: 'Upload succeeded, jumping to the file list…',
+        upload_failed: '{count} file(s) failed to upload, please retry',
+        save_success: 'Saved as {name}',
+        save_failed: 'Save failed, please retry',
+        delete_failed: 'Delete failed, please retry',
     }
 }

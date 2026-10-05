@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, type Ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import useFileStore from '@/store/file';
 import { formatBytes } from '@/utils/utils';
+import { toast } from '@/utils/toast';
 import { PutFile } from '@/api';
 
+const router = useRouter();
+const { t: $t } = useI18n();
 const fileStore = useFileStore();
 
 let fileUploadInput = ref();
@@ -12,39 +17,82 @@ let requestUploadFile = () => {
   fileUploadInput.value.click();
 }
 
+type UploadStatus = 'uploading' | 'done' | 'error';
+
 interface UploadedFile {
   name: string;
+  key: string;
   size: number;
   visibility: string;
-  done: boolean;
+  status: UploadStatus;
 }
 
 let uploadedFiles: Ref<UploadedFile[]> = ref([]);
+let pendingUploads = 0;
 
-const uploadSingle = async (index: number, filename: string, file: File) => {
-  await PutFile(filename, file, fileStore.visibility, "file");
-  uploadedFiles.value[index - 1].done = true;
-}
+const encodeName = encodeURIComponent;
+
+const statusClass = (status: UploadStatus): string => {
+  if (status === 'done') return 'i-mdi-check done-icon';
+  if (status === 'error') return 'i-mdi-alert-circle error-icon';
+  return 'uploading';
+};
+
+// Called whenever one upload settles. When the whole batch is done,
+// either jump to the file list (all succeeded) or report the failures.
+const checkBatchDone = () => {
+  if (pendingUploads > 0) {
+    return;
+  }
+  const failed = uploadedFiles.value.filter((f) => f.status === 'error');
+  if (failed.length > 0) {
+    toast($t('toast.upload_failed', { count: failed.length }), 'error');
+  } else if (uploadedFiles.value.length > 0) {
+    toast($t('toast.upload_success'), 'success');
+    setTimeout(() => {
+      router.push('/filemanage');
+    }, 1500);
+  }
+};
+
+const uploadSingle = async (index: number, file: File) => {
+  pendingUploads++;
+  try {
+    const key = await PutFile(file.name, file, fileStore.visibility, "file");
+    const row = uploadedFiles.value[index - 1];
+    row.key = key;
+    row.status = 'done';
+  } catch (error) {
+    console.error(error);
+    uploadedFiles.value[index - 1].status = 'error';
+  } finally {
+    pendingUploads--;
+    checkBatchDone();
+  }
+};
+
+const queueFiles = (files: FileList | File[]) => {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const index = uploadedFiles.value.push({
+      name: file.name,
+      key: '',
+      size: file.size,
+      visibility: fileStore.visibility,
+      status: 'uploading'
+    });
+    uploadSingle(index, file);
+  }
+};
 
 onMounted(() => {
   fileUploadInput.value.addEventListener('change', async (event: Event) => {
     const target = event.target as HTMLInputElement;
     const { files } = target;
     if (files && files.length > 0) {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const index = uploadedFiles.value.push({
-          name: file.name,
-          size: file.size,
-          visibility: fileStore.visibility,
-          done: false
-        });
-        try {
-          uploadSingle(index, file.name, file);
-        } catch (error) {
-          console.error(error);
-        }
-      }
+      queueFiles(files);
+      // Reset so the same file can be picked again (e.g. after a failure).
+      target.value = '';
     }
   });
 });
@@ -62,20 +110,7 @@ const onDragEvent = async (event: DragEvent) => {
   if (event.type === 'drop') {
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const index = uploadedFiles.value.push({
-          name: file.name,
-          size: file.size,
-          visibility: fileStore.visibility,
-          done: false
-        });
-        try {
-          uploadSingle(index, file.name, file);
-        } catch (error) {
-          console.error(error);
-        }
-      }
+      queueFiles(files);
     }
   }
 }
@@ -108,14 +143,14 @@ onUnmounted(() => {
       </div>
     </div>
     <div class="px-4 py-4 max-w-screen-md w-4/5">
-      <a v-for="file in uploadedFiles" :key="file.name" class="w-full flex flex-row items-center mt-4"
-        :href="`/${file.name}`" target="_blank">
+      <a v-for="file in uploadedFiles" :key="file.key || file.name" class="w-full flex flex-row items-center mt-4"
+        :href="file.status === 'done' ? '/' + encodeName(file.key) : undefined" target="_blank">
         <div class="w-10 h-10 i-mdi-file-document-outline"></div>
         <div class="flex flex-col">
-          <div class="text-lg font-semibold">{{ file.name }}</div>
+          <div class="text-lg font-semibold">{{ file.key || file.name }}</div>
           <div class="text-sm text-gray">{{ formatBytes(file.size) }} {{ file.visibility }}</div>
         </div>
-        <div class="ml-auto w-6 h-6" :class="file.done ? 'i-mdi-check' : 'uploading'"></div>
+        <div class="ml-auto w-6 h-6" :class="statusClass(file.status)"></div>
       </a>
     </div>
   </div>
@@ -177,6 +212,14 @@ body,
   --uno: h-50 border-dashed border-2 cursor-pointer;
   background: url(../assets/upload.svg) center center no-repeat;
   background-color: white;
+}
+
+.done-icon {
+  color: #67c23a;
+}
+
+.error-icon {
+  color: #f56c6c;
 }
 
 @keyframes spin {

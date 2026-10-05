@@ -6,9 +6,23 @@ import mime from 'mime/lite';
 import Env from './utils/Env';
 import { createS3Client, auth } from './utils/utils';
 
+/**
+ * The frontend URL-encodes the storage key (see src/api/file.ts).
+ * Pages may or may not have decoded it already, so decode defensively:
+ * a plain name without % sequences passes through unchanged, and a
+ * stray % never throws.
+ */
+const decodeFilename = (raw: string): string => {
+    try {
+        return decodeURIComponent(raw);
+    } catch {
+        return raw;
+    }
+};
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
     const { params, env } = context;
-    const { filename } = params;
+    const filename = decodeFilename(params.filename as string);
     const { BUCKET } = env;
     const s3 = createS3Client(env);
     const command = new GetObjectCommand({
@@ -54,7 +68,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     if (!auth(env, request)) {
         return new Response("Unauthorized", { status: 401 });
     }
-    const { filename } = params;
+    const filename = decodeFilename(params.filename as string);
     const { BUCKET } = env;
     const s3 = createS3Client(env);
     const headers = new Headers(request.headers);
@@ -80,7 +94,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     if (!auth(env, request)) {
         return new Response("Unauthorized", { status: 401 });
     }
-    const { filename } = params;
+    const filename = decodeFilename(params.filename as string);
     const { BUCKET } = env;
     const s3 = createS3Client(env);
     const headers = new Headers(request.headers);
@@ -106,7 +120,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     if (!auth(env, request)) {
         return new Response("Unauthorized", { status: 401 });
     }
-    const { filename } = params;
+    const filename = decodeFilename(params.filename as string);
     const { BUCKET } = env;
     const s3 = createS3Client(env);
     const command = new DeleteObjectCommand({

@@ -12,6 +12,9 @@ const initInterceptors = () => {
             if (error.response?.status === 401) {
                 await router.push('/login');
             }
+            // Re-throw so callers can tell success from failure
+            // (e.g. mark an upload row as failed instead of done).
+            return Promise.reject(error);
         });
 }
 

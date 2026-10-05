@@ -22,5 +22,12 @@ export default {
         file: '文件',
         login: '登录',
         filemanage: '文件管理',
+    },
+    toast: {
+        upload_success: '上传成功，正在跳转到文件列表…',
+        upload_failed: '有 {count} 个文件上传失败，请重试',
+        save_success: '已保存为 {name}',
+        save_failed: '保存失败，请重试',
+        delete_failed: '删除失败，请重试',
     }
 }
