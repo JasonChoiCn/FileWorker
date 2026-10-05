@@ -12,13 +12,26 @@ let uploadedFiles: Ref<_Object[]> = ref([]);
 
 const encodeName = encodeURIComponent;
 
+// S3 list results come back as JSON, so LastModified is an ISO string at
+// runtime (not a Date) — parse defensively.
+const toTime = (v?: Date | string): number => {
+    if (!v) return 0;
+    const t = new Date(v).getTime();
+    return Number.isNaN(t) ? 0 : t;
+};
+
 const refreshFiles = async () => {
-    const res = await ListFiles();
-    if (res.Contents) {
-        // Newest uploads first (S3 lists keys alphabetically, not by time).
-        uploadedFiles.value = [...res.Contents].sort(
-            (a, b) => (b.LastModified?.getTime() ?? 0) - (a.LastModified?.getTime() ?? 0)
-        );
+    try {
+        const res = await ListFiles();
+        if (res.Contents) {
+            // Newest uploads first (S3 lists keys alphabetically, not by time).
+            uploadedFiles.value = [...res.Contents].sort(
+                (a, b) => toTime(b.LastModified) - toTime(a.LastModified)
+            );
+        }
+    } catch (error) {
+        console.error(error);
+        toast($t("toast.list_failed"), 'error');
     }
 };
 

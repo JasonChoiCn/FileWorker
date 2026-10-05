@@ -29,5 +29,6 @@ export default {
         save_success: 'Saved as {name}',
         save_failed: 'Save failed, please retry',
         delete_failed: 'Delete failed, please retry',
+        list_failed: 'Failed to load the file list, please retry',
     }
 }

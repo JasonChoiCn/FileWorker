@@ -29,5 +29,6 @@ export default {
         save_success: '已保存为 {name}',
         save_failed: '保存失败，请重试',
         delete_failed: '删除失败，请重试',
+        list_failed: '读取文件列表失败，请重试',
     }
 }
