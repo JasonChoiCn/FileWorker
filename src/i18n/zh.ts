@@ -5,6 +5,7 @@ export default {
         private: '私有',
         save: '保存',
         refresh: '刷新',
+        close: '关闭',
     },
     index: {
         file_channel_title: '文件',
@@ -18,6 +19,12 @@ export default {
         password_placeholder: '密码',
         login_button: '登录',
         setting_success: '设置成功',
+        token_link: '免密登入链接',
+        token_title: '免密登入链接',
+        token_desc: '在新设备打开此链接即可自动登入，无需输入密码，有效期 30 天。请勿外传；更改密码后所有链接立即失效。',
+        copy: '复制链接',
+        copied: '已复制到剪贴板',
+        generate_failed: '生成链接失败，请重试',
     },
     page_title: {
         index: '主页',

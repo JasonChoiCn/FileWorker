@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from "vue-router";
 import Cookies from 'js-cookie'
 import i18n from "./i18n";
+import { loginWithToken } from "./api/auth";
 
 import IndexPage from "./pages/IndexPage.vue";
 import ClipPage from "./pages/ClipPage.vue";
@@ -58,9 +59,27 @@ const router = createRouter({
     routes,
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
     if (to.meta.title) {
         document.title = to.meta.title as string;
+    }
+    // Password-free login: ?token=..&expire=.. in the URL.
+    // Redeem it once, then strip it from the address bar.
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const expire = params.get('expire');
+    if (token && expire && !Cookies.get('PASSWORD')) {
+        try {
+            await loginWithToken(token, expire);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    if (params.has('token') || params.has('expire')) {
+        params.delete('token');
+        params.delete('expire');
+        const q = params.toString();
+        window.history.replaceState(null, '', window.location.pathname + (q ? `?${q}` : '') + window.location.hash);
     }
     const PASSWORD = Cookies.get('PASSWORD');
     if (!PASSWORD && to.path !== '/login') {

@@ -5,6 +5,7 @@ export default {
         private: 'Private',
         save: 'Save',
         refresh: 'Refresh',
+        close: 'Close',
     },
     index: {
         file_channel_title: 'Files',
@@ -18,6 +19,12 @@ export default {
         password_placeholder: 'Password',
         login_button: 'Login',
         setting_success: 'Setting success',
+        token_link: 'Login link',
+        token_title: 'Password-free login link',
+        token_desc: 'Open this link on a new device to log in automatically, no password needed. Valid for 30 days — do not share it. Changing the password invalidates all links immediately.',
+        copy: 'Copy link',
+        copied: 'Copied to clipboard',
+        generate_failed: 'Failed to generate the link, please retry',
     },
     page_title: {
         index: 'Index',

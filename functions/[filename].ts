@@ -52,7 +52,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     headers.set('etag', response.ETag);
 
-    if (headers.get("x-store-visibility") !== "public" && !auth(env, context.request)) {
+    if (headers.get("x-store-visibility") !== "public" && !(await auth(env, context.request))) {
         return new Response("Not found", { status: 404 });
     }
     return new Response(
@@ -65,7 +65,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
     const { params, env, request } = context;
-    if (!auth(env, request)) {
+    if (!(await auth(env, request))) {
         return new Response("Unauthorized", { status: 401 });
     }
     const filename = decodeFilename(params.filename as string);
@@ -91,7 +91,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
     const { params, env, request } = context;
-    if (!auth(env, request)) {
+    if (!(await auth(env, request))) {
         return new Response("Unauthorized", { status: 401 });
     }
     const filename = decodeFilename(params.filename as string);
@@ -117,7 +117,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
     const { params, env, request } = context;
-    if (!auth(env, request)) {
+    if (!(await auth(env, request))) {
         return new Response("Unauthorized", { status: 401 });
     }
     const filename = decodeFilename(params.filename as string);

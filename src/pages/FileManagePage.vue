@@ -3,13 +3,52 @@ import { onBeforeMount, ref, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatBytes, formatDate } from '@/utils/utils';
 import { toast } from '@/utils/toast';
-import { DeleteFile, ListFiles } from '@/api';
+import { DeleteFile, ListFiles, requestLoginToken, buildLoginLink } from '@/api';
 import type { _Object } from '@aws-sdk/client-s3';
 
 const { t: $t } = useI18n();
 
 let uploadedFiles: Ref<_Object[]> = ref([]);
 let loading = ref(true);
+
+// Password-free login link modal
+let showTokenModal = ref(false);
+let tokenLink = ref('');
+let generatingToken = ref(false);
+
+const openTokenModal = async () => {
+    showTokenModal.value = true;
+    if (tokenLink.value || generatingToken.value) {
+        return;
+    }
+    generatingToken.value = true;
+    try {
+        const { token, expire } = await requestLoginToken();
+        tokenLink.value = buildLoginLink(token, expire);
+    } catch (error) {
+        console.error(error);
+        toast($t("login.generate_failed"), 'error');
+        showTokenModal.value = false;
+    } finally {
+        generatingToken.value = false;
+    }
+};
+
+const copyTokenLink = async () => {
+    const text = tokenLink.value;
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch {
+        // Fallback for older browsers / non-secure contexts
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+    }
+    toast($t("login.copied"), 'success');
+};
 
 const encodeName = encodeURIComponent;
 
@@ -67,9 +106,14 @@ const onDeleteFileClick = async (key?: string) => {
                 <div class="page-title">{{ $t("page_title.filemanage") }}</div>
                 <div class="page-sub">{{ $t("filemanage.count", { count: uploadedFiles.length }) }}</div>
             </div>
-            <button class="btn btn-ghost" @click="refreshFiles">
-                <span class="i-mdi-refresh" :class="{ 'spinning': loading }"></span>{{ $t("common.refresh") }}
-            </button>
+            <div class="head-actions">
+                <button class="btn btn-ghost" @click="openTokenModal">
+                    <span class="i-mdi-link-variant"></span>{{ $t("login.token_link") }}
+                </button>
+                <button class="btn btn-ghost" @click="refreshFiles">
+                    <span class="i-mdi-refresh" :class="{ 'spinning': loading }"></span>{{ $t("common.refresh") }}
+                </button>
+            </div>
         </div>
 
         <div v-if="!loading && uploadedFiles.length === 0" class="card empty-state">
@@ -90,6 +134,22 @@ const onDeleteFileClick = async (key?: string) => {
                 <button class="icon-btn danger" @click="onDeleteFileClick(file.Key)">
                     <span class="i-mdi-trash-can-outline"></span>
                 </button>
+            </div>
+        </div>
+
+        <div v-if="showTokenModal" class="modal-overlay" @click.self="showTokenModal = false">
+            <div class="card modal">
+                <div class="modal-title">{{ $t("login.token_title") }}</div>
+                <div class="modal-desc">{{ $t("login.token_desc") }}</div>
+                <div v-if="generatingToken" class="modal-loading"><span class="spinner"></span></div>
+                <div v-else class="token-row">
+                    <input class="text-input monospace token-input" readonly :value="tokenLink"
+                        @focus="($event.target as HTMLInputElement).select()" />
+                    <button class="btn btn-primary" @click="copyTokenLink">
+                        <span class="i-mdi-content-copy"></span>{{ $t("login.copy") }}
+                    </button>
+                </div>
+                <button class="btn btn-ghost modal-close" @click="showTokenModal = false">{{ $t("common.close") }}</button>
             </div>
         </div>
     </div>
@@ -196,5 +256,70 @@ const onDeleteFileClick = async (key?: string) => {
 .empty-text {
     color: var(--ink-soft);
     font-size: 14.5px;
+}
+
+.head-actions {
+    display: flex;
+    gap: 8px;
+    flex: none;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.45);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+}
+
+.modal {
+    width: 100%;
+    max-width: 520px;
+    padding: 26px 24px 22px;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.modal-desc {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+    margin-bottom: 16px;
+}
+
+.modal-loading {
+    display: flex;
+    justify-content: center;
+    padding: 18px 0;
+}
+
+.modal-loading .spinner {
+    width: 26px;
+    height: 26px;
+    border-width: 3px;
+}
+
+.token-row {
+    display: flex;
+    gap: 10px;
+}
+
+.token-input {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+}
+
+.modal-close {
+    margin-top: 14px;
+    width: 100%;
 }
 </style>

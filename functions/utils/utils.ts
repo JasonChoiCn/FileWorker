@@ -61,7 +61,7 @@ const isEqual = (a: string, b: string) => {
     return crypto.subtle.timingSafeEqual(encodedA, encodedB);
 }
 
-const auth = (env: Env, request: Request) => {
+const auth = async (env: Env, request: Request): Promise<boolean> => {
     const { PASSWORD } = env;
     // cookie PASSWORD
     const cookie = parse(request.headers.get('Cookie') ?? '');
@@ -74,7 +74,7 @@ const auth = (env: Env, request: Request) => {
     const path_without_sign = path.replace(/&sign=[^&]+/, '');
     const sign = url.searchParams.get('sign');
     if (sign === null) return false;
-    if (!hmacVerify(path_without_sign, PASSWORD, sign)) {
+    if (!(await hmacVerify(path_without_sign, PASSWORD, sign))) {
         return false;
     }
     const expire = url.searchParams.get('expire');
@@ -89,4 +89,4 @@ const sign = async (path: string, key: string) => {
     return await hmacEncode(path, key);
 }
 
-export { createS3Client, auth, sign };
+export { createS3Client, auth, sign, hmacVerify };

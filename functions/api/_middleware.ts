@@ -11,7 +11,12 @@ const errorHandling: PagesFunction<Env> = async (context) => {
 
 const authentication: PagesFunction<Env> = async (context) => {
   const { env, request } = context;
-  if (!auth(env, request)) {
+  // Token redemption must work without an existing session —
+  // it IS the login, so it is exempt from authentication here.
+  if (new URL(request.url).pathname === "/api/login") {
+    return await context.next();
+  }
+  if (!(await auth(env, request))) {
     return new Response("Unauthorized", { status: 401 });
   }
   return await context.next();
