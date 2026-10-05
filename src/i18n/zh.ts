@@ -40,6 +40,8 @@ export default {
         save_failed: '保存失败，请重试',
         delete_failed: '删除失败，请重试',
         list_failed: '读取文件列表失败，请重试',
+        visibility_updated: '已设为{v}',
+        visibility_failed: '切换失败，请重试',
     },
     file: {
         upload_hint: '文件会以「日期-时间-文件名」保存，中文名也没问题',
@@ -52,5 +54,6 @@ export default {
     filemanage: {
         count: '共 {count} 个文件',
         empty: '还没有文件，去上传一个吧',
+        toggle_visibility_hint: '点击切换公开 / 私有',
     }
 }

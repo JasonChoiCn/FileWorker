@@ -47,4 +47,11 @@ const DeleteFile = async (filename: string) => {
     return response.data;
 }
 
-export { PutFile, PatchFile, DeleteFile, buildStorageKey, encodeKey }
+/** Read the x-store-visibility metadata of an uploaded file. */
+const GetFileVisibility = async (filename: string): Promise<string> => {
+    const url = `/${encodeKey(filename)}`;
+    const response = await axios.head(url);
+    return (response.headers['x-store-visibility'] as string) || '';
+}
+
+export { PutFile, PatchFile, DeleteFile, GetFileVisibility, buildStorageKey, encodeKey }

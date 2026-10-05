@@ -40,6 +40,8 @@ export default {
         save_failed: 'Save failed, please retry',
         delete_failed: 'Delete failed, please retry',
         list_failed: 'Failed to load the file list, please retry',
+        visibility_updated: 'Visibility set to {v}',
+        visibility_failed: 'Failed to change visibility, please retry',
     },
     file: {
         upload_hint: 'Files are saved as "date-time-filename", Chinese names are fine',
@@ -52,5 +54,6 @@ export default {
     filemanage: {
         count: '{count} file(s)',
         empty: 'No files yet — upload one to get started',
+        toggle_visibility_hint: 'Click to toggle public / private',
     }
 }

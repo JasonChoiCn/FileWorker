@@ -3,13 +3,17 @@ import { onBeforeMount, ref, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatBytes, formatDate } from '@/utils/utils';
 import { toast } from '@/utils/toast';
-import { DeleteFile, ListFiles, requestLoginToken, buildLoginLink } from '@/api';
+import { DeleteFile, ListFiles, GetFileVisibility, PatchFile, requestLoginToken, buildLoginLink } from '@/api';
 import type { _Object } from '@aws-sdk/client-s3';
 
 const { t: $t } = useI18n();
 
 let uploadedFiles: Ref<_Object[]> = ref([]);
 let loading = ref(true);
+let toggling = ref(false);
+let visMap: Ref<Record<string, string>> = ref({});
+
+const visOf = (key?: string): string => (key ? (visMap.value[key] ?? '') : '');
 
 // Password-free login link modal
 let showTokenModal = ref(false);
@@ -72,11 +76,49 @@ const refreshFiles = async () => {
         } else {
             uploadedFiles.value = [];
         }
+        await loadVisibilities();
     } catch (error) {
         console.error(error);
         toast($t("toast.list_failed"), 'error');
     } finally {
         loading.value = false;
+    }
+};
+
+// Visibility isn't part of the list output — fetch it per file in parallel.
+const loadVisibilities = async () => {
+    const entries = await Promise.all(
+        uploadedFiles.value.map(async (f) => {
+            const key = f.Key ?? '';
+            if (!key) return null;
+            try {
+                return [key, await GetFileVisibility(key)] as const;
+            } catch (e) {
+                console.error(e);
+                return [key, ''] as const;
+            }
+        })
+    );
+    const map: Record<string, string> = {};
+    for (const e of entries) {
+        if (e) map[e[0]] = e[1];
+    }
+    visMap.value = map;
+};
+
+const toggleVisibility = async (key?: string) => {
+    if (!key || toggling.value) return;
+    const nextVis = visOf(key) === 'private' ? 'public' : 'private';
+    toggling.value = true;
+    try {
+        await PatchFile(key, nextVis);
+        visMap.value[key] = nextVis;
+        toast($t("toast.visibility_updated", { v: nextVis === 'private' ? $t('common.private') : $t('common.public') }), 'success');
+    } catch (error) {
+        console.error(error);
+        toast($t("toast.visibility_failed"), 'error');
+    } finally {
+        toggling.value = false;
     }
 };
 
@@ -128,6 +170,15 @@ const onDeleteFileClick = async (key?: string) => {
                     <a class="file-name" :href="'/' + encodeName(file.Key ?? '')" target="_blank">{{ file.Key }}</a>
                     <div class="file-sub">{{ formatBytes(file.Size ?? 0) }} · {{ formatDate(file.LastModified) }}</div>
                 </div>
+                <button class="vis-pill" :class="visOf(file.Key) === 'private' ? 'vis-private' : 'vis-public'"
+                    @click="toggleVisibility(file.Key)" :disabled="toggling"
+                    :title="$t('filemanage.toggle_visibility_hint')">
+                    <span v-if="!visOf(file.Key)" class="spinner spinner-sm"></span>
+                    <template v-else>
+                        <span :class="visOf(file.Key) === 'private' ? 'i-mdi-lock-outline' : 'i-mdi-earth'"></span>
+                        {{ visOf(file.Key) === 'private' ? $t('common.private') : $t('common.public') }}
+                    </template>
+                </button>
                 <a class="icon-btn" :href="'/' + encodeName(file.Key ?? '')" target="_blank" title="open">
                     <span class="i-mdi-open-in-new"></span>
                 </a>
@@ -230,6 +281,50 @@ const onDeleteFileClick = async (key?: string) => {
 .icon-btn.danger:hover {
     background: var(--danger-soft);
     color: var(--danger-dark);
+}
+
+.vis-pill {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.vis-pill:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.vis-public {
+    background: var(--success-soft);
+    color: var(--success-dark);
+}
+
+.vis-public:hover {
+    background: #d8f0e1;
+}
+
+.vis-private {
+    background: #eef0f5;
+    color: var(--ink-soft);
+}
+
+.vis-private:hover {
+    background: #e2e5ee;
+}
+
+.spinner-sm {
+    width: 12px;
+    height: 12px;
+    border-width: 2px;
 }
 
 .empty-state {

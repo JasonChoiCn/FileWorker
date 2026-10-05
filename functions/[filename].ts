@@ -1,4 +1,4 @@
-import { GetObjectCommand, CopyObjectCommand, DeleteObjectCommand, GetObjectCommandOutput } from "@aws-sdk/client-s3";
+import { GetObjectCommand, CopyObjectCommand, DeleteObjectCommand, GetObjectCommandOutput, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import mime from 'mime/lite';
@@ -97,8 +97,17 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     const filename = decodeFilename(params.filename as string);
     const { BUCKET } = env;
     const s3 = createS3Client(env);
+    // Read current metadata first so untouched x-store-* entries
+    // (e.g. x-store-type) survive the REPLACE.
+    let currentMetadata: Record<string, string> = {};
+    try {
+        const head = await s3.send(new HeadObjectCommand({ Bucket: BUCKET!, Key: filename }));
+        currentMetadata = head.Metadata ?? {};
+    } catch {
+        return new Response("Not found", { status: 404 });
+    }
     const headers = new Headers(request.headers);
-    const x_store_headers = [];
+    const x_store_headers: [string, string][] = [];
     for (const [key, value] of headers.entries()) {
         if (key.startsWith('x-store-')) {
             x_store_headers.push([key, value]);
@@ -106,13 +115,36 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     }
     const command = new CopyObjectCommand({
         Bucket: BUCKET!,
-        CopySource: `${BUCKET}/${filename}`,
+        CopySource: `${BUCKET}/${encodeURIComponent(filename)}`,
         Key: filename as string,
         MetadataDirective: "REPLACE",
-        Metadata: Object.fromEntries(x_store_headers),
+        Metadata: { ...currentMetadata, ...Object.fromEntries(x_store_headers) },
     });
     await s3.send(command);
     return new Response("OK", { status: 200 });
+}
+
+export const onRequestHead: PagesFunction<Env> = async (context) => {
+    const { params, env, request } = context;
+    if (!(await auth(env, request))) {
+        return new Response("Unauthorized", { status: 401 });
+    }
+    const filename = decodeFilename(params.filename as string);
+    const { BUCKET } = env;
+    const s3 = createS3Client(env);
+    try {
+        const head = await s3.send(new HeadObjectCommand({ Bucket: BUCKET!, Key: filename }));
+        const headers = new Headers();
+        if (head.Metadata?.['x-store-visibility']) {
+            headers.set('x-store-visibility', head.Metadata['x-store-visibility']);
+        }
+        if (head.ContentLength !== undefined) {
+            headers.set('content-length', String(head.ContentLength));
+        }
+        return new Response(null, { status: 200, headers });
+    } catch {
+        return new Response("Not found", { status: 404 });
+    }
 };
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
