@@ -1,4 +1,4 @@
-import { GetObjectCommand, CopyObjectCommand, DeleteObjectCommand, GetObjectCommandOutput, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, CopyObjectCommand, DeleteObjectCommand, GetObjectCommandOutput, HeadObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import mime from 'mime/lite';
@@ -98,11 +98,15 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     const { BUCKET } = env;
     const s3 = createS3Client(env);
     // Read current metadata first so untouched x-store-* entries
-    // (e.g. x-store-type) survive the REPLACE.
+    // (e.g. x-store-type) survive the update.
     let currentMetadata: Record<string, string> = {};
+    let contentType: string | undefined;
+    let contentLength = 0;
     try {
         const head = await s3.send(new HeadObjectCommand({ Bucket: BUCKET!, Key: filename }));
         currentMetadata = head.Metadata ?? {};
+        contentType = head.ContentType;
+        contentLength = head.ContentLength ?? 0;
     } catch {
         return new Response("Not found", { status: 404 });
     }
@@ -113,15 +117,43 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
             x_store_headers.push([key, value]);
         }
     }
-    const command = new CopyObjectCommand({
-        Bucket: BUCKET!,
-        CopySource: `${BUCKET}/${encodeURIComponent(filename)}`,
-        Key: filename as string,
-        MetadataDirective: "REPLACE",
-        Metadata: { ...currentMetadata, ...Object.fromEntries(x_store_headers) },
-    });
-    await s3.send(command);
-    return new Response("OK", { status: 200 });
+    const newMetadata = { ...currentMetadata, ...Object.fromEntries(x_store_headers) };
+    const contentTypeParam = contentType ? { ContentType: contentType } : {};
+
+    // Primary path: server-side copy with replaced metadata.
+    try {
+        await s3.send(new CopyObjectCommand({
+            Bucket: BUCKET!,
+            CopySource: `${BUCKET}/${encodeURIComponent(filename)}`,
+            Key: filename as string,
+            MetadataDirective: "REPLACE",
+            Metadata: newMetadata,
+            ...contentTypeParam,
+        }));
+        return new Response("OK", { status: 200 });
+    } catch (e) {
+        console.error("CopyObject failed, falling back to Get+Put:", e);
+    }
+
+    // Fallback path: re-upload the object with the new metadata.
+    // (Some R2 setups reject CopyObject; Get+Put always works.)
+    try {
+        if (contentLength > 64 * 1024 * 1024) {
+            throw new Error("file too large for the fallback path");
+        }
+        const get = await s3.send(new GetObjectCommand({ Bucket: BUCKET!, Key: filename }));
+        const body = await get.Body!.transformToByteArray();
+        await s3.send(new PutObjectCommand({
+            Bucket: BUCKET!,
+            Key: filename as string,
+            Body: body,
+            Metadata: newMetadata,
+            ...contentTypeParam,
+        }));
+        return new Response("OK", { status: 200 });
+    } catch (e: any) {
+        return new Response(`Patch failed: ${e?.message ?? e}`, { status: 500 });
+    }
 }
 
 export const onRequestHead: PagesFunction<Env> = async (context) => {

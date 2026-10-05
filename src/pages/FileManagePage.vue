@@ -114,9 +114,10 @@ const toggleVisibility = async (key?: string) => {
         await PatchFile(key, nextVis);
         visMap.value[key] = nextVis;
         toast($t("toast.visibility_updated", { v: nextVis === 'private' ? $t('common.private') : $t('common.public') }), 'success');
-    } catch (error) {
+    } catch (error: any) {
         console.error(error);
-        toast($t("toast.visibility_failed"), 'error');
+        const code = error?.response?.status ? `HTTP ${error.response.status}` : 'network';
+        toast($t("toast.visibility_failed", { code }), 'error');
     } finally {
         toggling.value = false;
     }

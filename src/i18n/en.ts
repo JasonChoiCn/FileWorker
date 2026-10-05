@@ -41,7 +41,7 @@ export default {
         delete_failed: 'Delete failed, please retry',
         list_failed: 'Failed to load the file list, please retry',
         visibility_updated: 'Visibility set to {v}',
-        visibility_failed: 'Failed to change visibility, please retry',
+        visibility_failed: 'Failed to change visibility, please retry ({code})',
     },
     file: {
         upload_hint: 'Files are saved as "date-time-filename", Chinese names are fine',

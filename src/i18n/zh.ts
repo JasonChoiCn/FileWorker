@@ -41,7 +41,7 @@ export default {
         delete_failed: '删除失败，请重试',
         list_failed: '读取文件列表失败，请重试',
         visibility_updated: '已设为{v}',
-        visibility_failed: '切换失败，请重试',
+        visibility_failed: '切换失败，请重试（{code}）',
     },
     file: {
         upload_hint: '文件会以「日期-时间-文件名」保存，中文名也没问题',
