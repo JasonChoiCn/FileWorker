@@ -107,8 +107,11 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
         currentMetadata = head.Metadata ?? {};
         contentType = head.ContentType;
         contentLength = head.ContentLength ?? 0;
-    } catch {
-        return new Response("Not found", { status: 404 });
+    } catch (e: any) {
+        return new Response(
+            `DIAG head-failed key="${filename}" raw-param="${params.filename}": ${e?.message ?? e}`,
+            { status: 404 }
+        );
     }
     const headers = new Headers(request.headers);
     const x_store_headers: [string, string][] = [];
@@ -152,7 +155,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
         }));
         return new Response("OK", { status: 200 });
     } catch (e: any) {
-        return new Response(`Patch failed: ${e?.message ?? e}`, { status: 500 });
+        return new Response(`DIAG patch-failed key="${filename}": ${e?.message ?? e}`, { status: 500 });
     }
 }
 

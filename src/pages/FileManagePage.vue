@@ -116,8 +116,9 @@ const toggleVisibility = async (key?: string) => {
         toast($t("toast.visibility_updated", { v: nextVis === 'private' ? $t('common.private') : $t('common.public') }), 'success');
     } catch (error: any) {
         console.error(error);
-        const code = error?.response?.status ? `HTTP ${error.response.status}` : 'network';
-        toast($t("toast.visibility_failed", { code }), 'error');
+        const status = error?.response?.status ? `HTTP ${error.response.status}` : 'network';
+        const body = typeof error?.response?.data === 'string' ? error.response.data.slice(0, 160) : '';
+        toast($t("toast.visibility_failed", { code: body ? `${status} ${body}` : status }), 'error');
     } finally {
         toggling.value = false;
     }
