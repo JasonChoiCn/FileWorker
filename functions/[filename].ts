@@ -117,17 +117,25 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
         }
     };
     const vDecoded = filename;
-    const vRaw = raw;
-    const vPlus = filename.replace(/ /g, "+");
-    const vNbsp = filename.replace(/ /g, "\u00a0");
+    const typeOfHead = typeof HeadObjectCommand;
+    const typeOfGet = typeof GetObjectCommand;
+    let headMsg = "";
+    let headStack = "";
+    try {
+        await s3.send(new HeadObjectCommand({ Bucket: BUCKET!, Key: vDecoded }));
+        headMsg = "200";
+    } catch (e: any) {
+        headMsg = `${e?.name ?? "?"}: ${(e?.message ?? "?").toString().slice(0, 200)}`;
+        headStack = `${(e?.stack ?? "?").toString().split("\n").slice(0, 4).join(" | ").slice(0, 300)}`;
+    }
     const report = [
-        `decodedHead=${await tryHead(vDecoded)}`,
+        `typeofHead=${typeOfHead}`,
+        `typeofGet=${typeOfGet}`,
+        `headErr=${headMsg}`,
+        `headStack=${headStack}`,
         `decodedGet=${await tryGet(vDecoded)}`,
-        `rawHead=${await tryHead(vRaw)}`,
-        `plusHead=${await tryHead(vPlus)}`,
-        `nbspHead=${await tryHead(vNbsp)}`,
     ].join(" ");
-    return new Response(`DIAG2 ${report} key="${vDecoded}"`, { status: 404 });
+    return new Response(`DIAG3 ${report}`, { status: 404 });
 };
 
 export const onRequestHead: PagesFunction<Env> = async (context) => {
