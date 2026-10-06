@@ -90,74 +90,45 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 }
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
+    // TEMPORARY DIAGNOSTIC - will be replaced after root cause is found
     const { params, env, request } = context;
     if (!(await auth(env, request))) {
         return new Response("Unauthorized", { status: 401 });
     }
     const filename = decodeFilename(params.filename as string);
+    const raw = params.filename as string;
     const { BUCKET } = env;
     const s3 = createS3Client(env);
-    // Read current metadata first so untouched x-store-* entries
-    // (e.g. x-store-type) survive the update.
-    let currentMetadata: Record<string, string> = {};
-    let contentType: string | undefined;
-    let contentLength = 0;
-    try {
-        const head = await s3.send(new HeadObjectCommand({ Bucket: BUCKET!, Key: filename }));
-        currentMetadata = head.Metadata ?? {};
-        contentType = head.ContentType;
-        contentLength = head.ContentLength ?? 0;
-    } catch (e: any) {
-        return new Response(
-            `DIAG head-failed key="${filename}" raw-param="${params.filename}": ${e?.message ?? e}`,
-            { status: 404 }
-        );
-    }
-    const headers = new Headers(request.headers);
-    const x_store_headers: [string, string][] = [];
-    for (const [key, value] of headers.entries()) {
-        if (key.startsWith('x-store-')) {
-            x_store_headers.push([key, value]);
+    const tryHead = async (key: string): Promise<string> => {
+        try {
+            await s3.send(new HeadObjectCommand({ Bucket: BUCKET!, Key: key }));
+            return "200";
+        } catch (e: any) {
+            return `${e?.$metadata?.httpStatusCode ?? "?"}:${e?.name ?? "?"}`;
         }
-    }
-    const newMetadata = { ...currentMetadata, ...Object.fromEntries(x_store_headers) };
-    const contentTypeParam = contentType ? { ContentType: contentType } : {};
-
-    // Primary path: server-side copy with replaced metadata.
-    try {
-        await s3.send(new CopyObjectCommand({
-            Bucket: BUCKET!,
-            CopySource: `${BUCKET}/${encodeURIComponent(filename)}`,
-            Key: filename as string,
-            MetadataDirective: "REPLACE",
-            Metadata: newMetadata,
-            ...contentTypeParam,
-        }));
-        return new Response("OK", { status: 200 });
-    } catch (e) {
-        console.error("CopyObject failed, falling back to Get+Put:", e);
-    }
-
-    // Fallback path: re-upload the object with the new metadata.
-    // (Some R2 setups reject CopyObject; Get+Put always works.)
-    try {
-        if (contentLength > 64 * 1024 * 1024) {
-            throw new Error("file too large for the fallback path");
+    };
+    const tryGet = async (key: string): Promise<string> => {
+        try {
+            const r = await s3.send(new GetObjectCommand({ Bucket: BUCKET!, Key: key, Range: "bytes=0-0" }));
+            try { await (r.Body as any)?.cancel(); } catch {}
+            return "200";
+        } catch (e: any) {
+            return `${e?.$metadata?.httpStatusCode ?? "?"}:${e?.name ?? "?"}`;
         }
-        const get = await s3.send(new GetObjectCommand({ Bucket: BUCKET!, Key: filename }));
-        const body = await get.Body!.transformToByteArray();
-        await s3.send(new PutObjectCommand({
-            Bucket: BUCKET!,
-            Key: filename as string,
-            Body: body,
-            Metadata: newMetadata,
-            ...contentTypeParam,
-        }));
-        return new Response("OK", { status: 200 });
-    } catch (e: any) {
-        return new Response(`DIAG patch-failed key="${filename}": ${e?.message ?? e}`, { status: 500 });
-    }
-}
+    };
+    const vDecoded = filename;
+    const vRaw = raw;
+    const vPlus = filename.replace(/ /g, "+");
+    const vNbsp = filename.replace(/ /g, "\u00a0");
+    const report = [
+        `decodedHead=${await tryHead(vDecoded)}`,
+        `decodedGet=${await tryGet(vDecoded)}`,
+        `rawHead=${await tryHead(vRaw)}`,
+        `plusHead=${await tryHead(vPlus)}`,
+        `nbspHead=${await tryHead(vNbsp)}`,
+    ].join(" ");
+    return new Response(`DIAG2 ${report} key="${vDecoded}"`, { status: 404 });
+};
 
 export const onRequestHead: PagesFunction<Env> = async (context) => {
     const { params, env, request } = context;
